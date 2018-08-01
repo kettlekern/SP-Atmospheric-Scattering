@@ -61,7 +61,7 @@ public:
 	GLuint SkyTexture, NightTexture;
 	GLuint GrassNormal, SnowNormal, SandNormal, CliffNormal;
 	float time = 1.0;
-	OldCamera mycam;
+	FPcamera mycam;
 
 	void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 	{
@@ -478,7 +478,7 @@ public:
 
 	glm::vec3 setOffset() 
 	{
-		vec3 offset = mycam.getLocation();
+		vec3 offset = -mycam.getLocation();
 		offset.x = ((int)(offset.x / RESOLUTION)) * RESOLUTION;
 		offset.y = 0;
 		offset.z = ((int)(offset.z / RESOLUTION)) * RESOLUTION;
@@ -580,14 +580,13 @@ public:
 	glm::mat4 SetSkyboxModel()
 	{
 		float sangle = 3.1415926f / 2.0f;
-		glm::mat4 RotateX, TransXYZ, TransY, S;
+		glm::mat4 RotateX, T, S;
 
 		RotateX = glm::rotate(glm::mat4(1.0f), sangle, glm::vec3(1.0f, 0.0f, 0.0f));
-		glm::vec3 camp = -mycam.getLocation();
-		TransXYZ = glm::translate(glm::mat4(1.0f), camp);
 		S = glm::scale(glm::mat4(1.0f), glm::vec3(3.0f));
+		T = glm::translate(glm::mat4(1.0f), mycam.getLocation());
 
-		return TransXYZ * RotateX * S;
+		return T * RotateX * S;
 	}
 
 	glm::mat4 getModelMatrix() {

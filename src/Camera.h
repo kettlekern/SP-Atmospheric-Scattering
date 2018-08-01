@@ -33,7 +33,7 @@ public:
 
 	glm::mat4 update(float ftime);
 
-	glm::mat4 getView() { return update(-.0005f); }
+	glm::mat4 getView() { return update(.0005f); }
 
 	glm::mat4 getPerspective(float aspect) {
 		return glm::perspective((3.14159f / 4.0f), aspect, 0.1f, MESHSIZE * RESOLUTION);
@@ -44,8 +44,8 @@ public:
 
 class FPcamera : public Camera {
 public:
-	FPcamera() : pose(glm::vec3(0.0)) {};
-	FPcamera(const glm::vec3& loc) : pose(loc) {}
+	FPcamera() {};
+	FPcamera(const glm::vec3& loc) : pos(loc) {}
 
 	void update(GLFWwindow* window, float elapsedTime);
 
@@ -61,22 +61,23 @@ public:
 	//Returns the perspective matrix associated with the camera
 	glm::mat4 getPerspective(float aspect);
 
-	float fov = 35.0f;
-	float near = .01f;
-	float far = 100.0f;
-
 protected:
 
-	Pose pose;
+	glm::vec3 pos = glm::vec3(0.0f, 130.0f, 0.0f);
+	glm::vec3 direction = glm::vec3(0.0f, 0.0f, 1.0f);
 	glm::vec3 upDir = glm::vec3(0.0, 1.0, 0.0);
 
 	glm::vec2 mousePos;
 	bool first = true;
-	float speedmult = 1.0f;
+	float speedmult = -1.0f; // Negative because we build the model matrix for objects in the world based on the camera, which should be negative 
 
 	const float pi = 3.14159265f;
 	const float VERT_ANGLE_LIMIT = cos(80 / 360 * 2 * pi);
 	const float SENSITIVITY = 100.0f;
+
+	float fov = 35.0f;
+	float near = 0.01f;
+	float far = 800.0f;
 };
 
 #endif

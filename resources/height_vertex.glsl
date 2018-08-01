@@ -13,7 +13,7 @@ uniform vec3 camoff;
 void main()
 {
 	vec2 texcoords = vertTex;
-	float t = 1. / 100;
+	float t = 1.0 / 100.0;
 	texcoords -= vec2(camoff.x, camoff.z) * t;
 
 	vec4 tpos = vec4(vertPos, 1.0);

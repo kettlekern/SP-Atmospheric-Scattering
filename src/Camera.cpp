@@ -35,12 +35,12 @@ glm::mat4 OldCamera::update(float ftime)
 	}
 
 	rot.y += yangle;
-	glm::mat4 R = glm::rotate(glm::mat4(1), rot.y, glm::vec3(0, 1, 0));
-	glm::vec4 dir = glm::vec4(0, elevation, speed, 1);
+	glm::mat4 R = glm::rotate(glm::mat4(1.0f), rot.y, glm::vec3(0.0f, 1.0f, 0.0f));
+	glm::vec4 dir = glm::vec4(0.0f, elevation, speed, 0.0f);
 	dir = dir * R;
 	pos += glm::vec3(dir.x, dir.y, dir.z);
 
-	glm::mat4 T = glm::translate(glm::mat4(1), pos);
+	glm::mat4 T = glm::translate(glm::mat4(1.0f), pos);
 	return R * T;
 }
 
@@ -125,9 +125,10 @@ void FPcamera::setCamera(GLFWwindow* window) {
 	}
 
 	float x, y, z;
-	pose.orient.x = sin(theta) * sin(phi + pi / 2);
-	pose.orient.y = cos(phi + pi / 2);
-	pose.orient.z = cos(theta) * sin(phi + pi / 2);
+	direction.x = sin(theta) * sin(phi + pi / 2);
+	direction.y = cos(phi + pi / 2);
+	direction.z = cos(theta) * sin(phi + pi / 2);
+	direction = normalize(direction);
 }
 
 void FPcamera::update(GLFWwindow* window, float elapsedTime){
@@ -141,40 +142,39 @@ void FPcamera::update(GLFWwindow* window, float elapsedTime){
 	float finalmult = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ? speedmult*4.0 : speedmult;
 
 	if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS){
-		pose.loc += viewDir*elapsedTime*finalmult;
+		pos += viewDir*elapsedTime*finalmult;
 	}
 	if(glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS){
-		pose.loc -= viewDir*elapsedTime*finalmult;
+		pos -= viewDir*elapsedTime*finalmult;
 	}
 	if(glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS){
-		pose.loc += rightDir*elapsedTime*finalmult;
+		pos += rightDir*elapsedTime*finalmult;
 	}
 	if(glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS){
-		pose.loc -= rightDir*elapsedTime*finalmult;
+		pos -= rightDir*elapsedTime*finalmult;
 	}
 	if(glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS){
-		pose.loc += upDir*elapsedTime*finalmult;
+		pos += upDir*elapsedTime*finalmult;
 	}
 	if(glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS){
-		pose.loc -= upDir*elapsedTime*finalmult;
+		pos -= upDir*elapsedTime*finalmult;
 	}
 }
 
 glm::vec3 FPcamera::getLocation(){
-	return pose.loc;
+	return pos;
 }
 
 glm::vec3 FPcamera::getViewDir(){
-	return normalize(pose.orient);
+	return direction;
 }
 
 //Returns the view matrix
 glm::mat4 FPcamera::getView(){
-	return glm::lookAt(
-		pose.loc,
-		pose.loc + getViewDir(),
-		upDir
-	);
+	return glm::lookAt(pos, pos + getViewDir(), upDir);
+	/*auto R = glm::lookAt(pos, pos + getViewDir(), upDir);
+	auto T = glm::translate(glm::mat4(1.0f), pos);
+	return R * T;*/
 }
 
 //Returns the perspective matrix associated with the camera
