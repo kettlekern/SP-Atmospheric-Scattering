@@ -23,7 +23,7 @@ Timeline<T>::Timeline(){
 
 template <typename T>
 void Timeline<T>::setSource(T (*timeSource)()){
-  timeSource = timeSource;
+  this->timeSource = timeSource;
 }
 
 template <typename T>

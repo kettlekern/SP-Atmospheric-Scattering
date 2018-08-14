@@ -69,7 +69,7 @@ protected:
 
 	glm::vec2 mousePos;
 	bool first = true;
-	float speedmult = -1.0f; // Negative because we build the model matrix for objects in the world based on the camera, which should be negative 
+	float speedmult = 50.0f; 
 
 	const float pi = 3.14159265f;
 	const float VERT_ANGLE_LIMIT = cos(80 / 360 * 2 * pi);

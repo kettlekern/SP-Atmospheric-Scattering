@@ -46,7 +46,7 @@ public:
 	WindowManager * windowManager = nullptr;
 
 	// Our shader program
-	std::shared_ptr<Program> heightshader, progSky, progWater;
+	std::shared_ptr<Program> heightshader, progSky, progWater, progAtmos;
 
 	// Contains vertex information for OpenGL
 	GLuint TerrainVertexArrayID;
@@ -62,6 +62,12 @@ public:
 	GLuint GrassNormal, SnowNormal, SandNormal, CliffNormal;
 	float time = 1.0;
 	FPcamera mycam;
+
+	//geometry for texture render
+	GLuint quad_VertexArrayID;
+	GLuint quad_vertexbuffer;
+
+	shared_ptr<Shape> atmosQuad;
 
 	void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 	{
@@ -232,6 +238,8 @@ public:
 
 		InitSkysphere(resourceDirectory);
 
+		InitAtmosphereQuad(resourceDirectory);
+
 		InitTextureLocations();
 
 		glEnable(GL_BLEND);
@@ -282,6 +290,15 @@ public:
 		skySphere->loadMesh(resourceDirectory + "/sphere.obj");
 		skySphere->resize();
 		skySphere->init();
+	}
+
+	void InitAtmosphereQuad(const std::string &resourceDirectory)
+	{
+		// Initialize mesh.
+		atmosQuad = make_shared<Shape>();
+		atmosQuad->loadMesh(resourceDirectory + "/quad.obj");
+		//atmosQuad->resize();
+		atmosQuad->init();
 	}
 
 	void InitTextureLocations()
@@ -354,7 +371,7 @@ public:
 		GLSL::checkVersion();
 
 		// Set background color.
-		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		// Enable z-buffer test.
 		glEnable(GL_DEPTH_TEST);
 
@@ -368,6 +385,8 @@ public:
 		InitSkyShader(resourceDirectory);
 
 		InitWaterShader(resourceDirectory);
+
+		InitAtmosphereShader(resourceDirectory);
 	}
 
 	void InitHeightShader(const std::string & resourceDirectory)
@@ -418,6 +437,26 @@ public:
 		progSky->addAttribute("vertTex");
 	}
 
+	void InitAtmosphereShader(const std::string & resourceDirectory)
+	{
+		// Initialize the GLSL progSkyram.
+		progAtmos = std::make_shared<Program>();
+		progAtmos->setVerbose(true);
+		progAtmos->setShaderNames(resourceDirectory + "/atmosphere_vert.glsl", resourceDirectory + "/atmosphere_frag.glsl");
+		if (!progAtmos->init())
+		{
+			std::cerr << "Skybox shaders failed to compile... exiting!" << std::endl;
+			int hold;
+			cin >> hold;
+			exit(1);
+		}
+		progAtmos->addUniform("V");
+		progAtmos->addUniform("campos");
+		progAtmos->addUniform("uSunPos");
+		progAtmos->addAttribute("vertPos");
+		progAtmos->addAttribute("vertTex");
+	}
+
 	void InitWaterShader(const std::string & resourceDirectory)
 	{
 		// Initialize the GLSL program.
@@ -465,7 +504,9 @@ public:
 
 		vec3 offset = setOffset();
 
-		DrawSkybox(P, V);
+		//DrawSkybox(P, V);
+
+		DrawAtmosphere(P, V);
 
 		DrawWater(P, V, offset);
 
@@ -577,6 +618,26 @@ public:
 		progSky->unbind();
 	}
 
+	void DrawAtmosphere(const glm::mat4 &P, const glm::mat4 &V)
+	{
+		// Draw the skybox ----------------------------------------------------------------
+		progAtmos->bind();
+
+		glm::mat4 M = SetSkyboxModel();
+
+		//send the matrices to the shaders 
+		glUniformMatrix4fv(progAtmos->getUniform("V"), 1, GL_FALSE, &V[0][0]);
+		glUniform3fv(progAtmos->getUniform("campos"), 1, &mycam.getLocation()[0]);
+		glUniform3fv(progAtmos->getUniform("uSunPos"), 1, &vec3(0, cos(time) * 0.4f + 0.3f, -1)[0]);
+
+		glDisable(GL_DEPTH_TEST);
+		atmosQuad->draw(progAtmos, FALSE);
+
+		glEnable(GL_DEPTH_TEST);
+
+		progAtmos->unbind();
+	}
+
 	glm::mat4 SetSkyboxModel()
 	{
 		float sangle = 3.1415926f / 2.0f;
@@ -605,7 +666,6 @@ public:
 		glViewport(0, 0, width, height);
 
 		// Clear framebuffer.
-		glClearColor(0.8f, 0.8f, 1.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		setTime();
@@ -637,13 +697,14 @@ int main(int argc, char **argv)
 		resourceDir = argv[1];
 	}
 	Timeline<double> time;
+	time.setSource(&glfwGetTime);
 
 	Application *application = new Application();
 
 	/* your main will always include a similar set up to establish your window
 		and GL context, etc. */
 	WindowManager * windowManager = new WindowManager();
-	windowManager->init(1920, 1080);
+	windowManager->init(640, 480);
 	windowManager->setEventCallbacks(application);
 	application->windowManager = windowManager;
 

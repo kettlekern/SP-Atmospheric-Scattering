@@ -40,7 +40,7 @@ void Shape::loadMesh(const string &meshName, string *mtlpath, unsigned char *(lo
 		posBufID = new unsigned int[shapes.size()];
 		norBufID = new unsigned int[shapes.size()];
 		texBufID = new unsigned int[shapes.size()];
-		vaoID = new unsigned int[shapes.size()];
+		vaoID = new unsigned int[shapes.size() + 1];
 		materialIDs = new unsigned int[shapes.size()];
 
 		textureIDs = new unsigned int[shapes.size()];
@@ -162,14 +162,12 @@ void Shape::init()
 	for (int i = 0; i < obj_count; i++)
 
 	{
-
-
 		// Initialize the vertex array object
-		glGenVertexArrays(1, &vaoID[i]);
+		CHECKED_GL_CALL(glGenVertexArrays(1, &vaoID[i]));
 		glBindVertexArray(vaoID[i]);
 
 		// Send the position array to the GPU
-		glGenBuffers(1, &posBufID[i]);
+		CHECKED_GL_CALL(glGenBuffers(1, &posBufID[i]));
 		glBindBuffer(GL_ARRAY_BUFFER, posBufID[i]);
 		glBufferData(GL_ARRAY_BUFFER, posBuf[i].size() * sizeof(float), posBuf[i].data(), GL_STATIC_DRAW);
 
@@ -192,7 +190,7 @@ void Shape::init()
 		}
 		else
 		{
-			glGenBuffers(1, &texBufID[i]);
+			CHECKED_GL_CALL(glGenBuffers(1, &texBufID[i]));
 			glBindBuffer(GL_ARRAY_BUFFER, texBufID[i]);
 			glBufferData(GL_ARRAY_BUFFER, texBuf[i].size() * sizeof(float), texBuf[i].data(), GL_STATIC_DRAW);
 		}

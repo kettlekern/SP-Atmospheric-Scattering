@@ -30,6 +30,7 @@
     <ClCompile Include="WindowManager.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AtmosphericScattering.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="GLSL.h" />
     <ClInclude Include="MatrixStack.h" />
