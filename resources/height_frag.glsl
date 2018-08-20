@@ -19,6 +19,7 @@ uniform sampler2D grassNormal;
 uniform sampler2D sandNormal;
 uniform vec3 camoff;
 uniform vec3 campos;
+uniform vec3 uSunPos;
 uniform int meshsize;
 uniform float resolution;
 
@@ -151,7 +152,7 @@ void main()
 
 		color.rgb = applyFog(color.rgb, length(campos.xz - vertex_pos.xz), 0.01f);
 		// Diffuse lighting
-		vec3 lightSource = vec3(0.0f, cTime, cTime) * 1000;
+		vec3 lightSource = uSunPos;
 		vec3 distance = normalize(campos - lightSource);
 		float diffuse = dot(vertex_norm, distance);
 		color.rgb *= max(0.5, diffuse * 0.6);

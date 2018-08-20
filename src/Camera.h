@@ -11,6 +11,7 @@
 //Aparently a windows package defines these somewhere, so I'm going to break their code because that is so irresponsible of them
 #undef near
 #undef far
+#undef aspect
 
 
 class OldCamera : public Camera
@@ -53,10 +54,20 @@ public:
 
 	glm::vec3 getViewDir();
 
+	const glm::vec3 & getUpDir() {
+		return upDir;
+	}
+
 	//Returns the view matrix
 	glm::mat4 getView();
 
 	void setCamera(GLFWwindow* window);
+
+	float getTheta() { return theta; }
+	float getPhi() { return phi; }
+	float getAspect() { return aspect; }
+	float getFOV() { return fov; }
+	float getNearDist() { return near; }
 
 	//Returns the perspective matrix associated with the camera
 	glm::mat4 getPerspective(float aspect);
@@ -65,19 +76,22 @@ protected:
 
 	glm::vec3 pos = glm::vec3(0.0f, 130.0f, 0.0f);
 	glm::vec3 direction = glm::vec3(0.0f, 0.0f, 1.0f);
-	glm::vec3 upDir = glm::vec3(0.0, 1.0, 0.0);
+	glm::vec3 upDir = glm::vec3(0.0f, 1.0f, 0.0f);
 
 	glm::vec2 mousePos;
 	bool first = true;
 	float speedmult = 50.0f; 
 
 	const float pi = 3.14159265f;
-	const float VERT_ANGLE_LIMIT = cos(80 / 360 * 2 * pi);
+	const float VERT_ANGLE_LIMIT = cos(0.5f / 360.0f * 2 * pi);
 	const float SENSITIVITY = 100.0f;
 
-	float fov = 35.0f;
-	float near = 0.01f;
+	float fov = 60.0f;
+	float near = 0.1f;
 	float far = 800.0f;
+	float theta;
+	float phi;
+	float aspect = 1.0f;
 };
 
 #endif

@@ -37,6 +37,18 @@ double get_last_elapsed_time()
 	return difference;
 }
 
+class Sun {
+public:
+	glm::vec3 position;
+	glm::vec3 color;
+	void update(float dt) {
+		//time += dt * 0.1f;
+		position = vec3(0.0f, cos(time), sin(time)) * 1000.0f;
+	}
+protected:
+	float time = 0.0f;
+};
+
 
 class Application : public EventCallbacks
 {
@@ -68,6 +80,8 @@ public:
 	GLuint quad_vertexbuffer;
 
 	shared_ptr<Shape> atmosQuad;
+	Sun sun;
+	const float pi = 3.14159265f;
 
 	void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 	{
@@ -297,7 +311,8 @@ public:
 		// Initialize mesh.
 		atmosQuad = make_shared<Shape>();
 		atmosQuad->loadMesh(resourceDirectory + "/quad.obj");
-		//atmosQuad->resize();
+		//Don't resize this, we want it to have size 2 later
+		atmosQuad->resize();
 		atmosQuad->init();
 	}
 
@@ -305,7 +320,7 @@ public:
 	{
 		//[TWOTEXTURES]
 		//set the 2 textures to the correct samplers in the fragment shader:
-		GLuint TextureLocation, GrassTextureLocation, SnowTextureLocation, SandTextureLocation, CliffTextureLocation, SkyTextureLocation, NightTextureLocation;
+		GLuint GrassTextureLocation, SnowTextureLocation, SandTextureLocation, CliffTextureLocation, SkyTextureLocation, NightTextureLocation;
 		GLuint GrassNormalLocation, SnowNormalLocation, SandNormalLocation, CliffNormalLocation;
 
 		GrassTextureLocation = glGetUniformLocation(heightshader->pid, "grassSampler");
@@ -406,6 +421,7 @@ public:
 		heightshader->addUniform("V");
 		heightshader->addUniform("M");
 		heightshader->addUniform("camoff");
+		heightshader->addUniform("uSunPos");
 		heightshader->addUniform("campos");
 		heightshader->addUniform("time");
 		heightshader->addUniform("resolution");
@@ -450,7 +466,9 @@ public:
 			cin >> hold;
 			exit(1);
 		}
+		progAtmos->addUniform("M");
 		progAtmos->addUniform("V");
+		progAtmos->addUniform("P");
 		progAtmos->addUniform("campos");
 		progAtmos->addUniform("uSunPos");
 		progAtmos->addAttribute("vertPos");
@@ -483,6 +501,7 @@ public:
 	void update(float dt) 
 	{
 		mycam.update(windowManager->getHandle(), dt);
+		sun.update(dt);
 	}
 
 	/****DRAW
@@ -506,7 +525,7 @@ public:
 
 		//DrawSkybox(P, V);
 
-		DrawAtmosphere(P, V);
+		DrawAtmosphere(P);
 
 		DrawWater(P, V, offset);
 
@@ -564,6 +583,7 @@ public:
 
 
 		glUniform3fv(heightshader->getUniform("camoff"), 1, &offset[0]);
+		glUniform3fv(heightshader->getUniform("uSunPos"), 1, &sun.position[0]);
 		glUniform3fv(heightshader->getUniform("campos"), 1, &mycam.getLocation()[0]);
 		glUniform1f(heightshader->getUniform("time"), time);
 		glUniform1i(heightshader->getUniform("meshsize"), MESHSIZE);
@@ -588,7 +608,7 @@ public:
 		glActiveTexture(GL_TEXTURE7);
 		glBindTexture(GL_TEXTURE_2D, SandNormal);
 
-		glPatchParameteri(GL_PATCH_VERTICES, 3.0f);
+		glPatchParameteri(GL_PATCH_VERTICES, 3);
 		glDrawElements(GL_PATCHES, MESHSIZE*MESHSIZE * 6, GL_UNSIGNED_INT, (void*)0);
 	}
 
@@ -618,17 +638,24 @@ public:
 		progSky->unbind();
 	}
 
-	void DrawAtmosphere(const glm::mat4 &P, const glm::mat4 &V)
+	void DrawAtmosphere(const glm::mat4 &P)
 	{
 		// Draw the skybox ----------------------------------------------------------------
 		progAtmos->bind();
 
-		glm::mat4 M = SetSkyboxModel();
+		glm::mat4 V = SetAtmosphereView();
+		//We want the camera position for the rays to be 0 based because we use the camera position in the shader
+		
+		//glm::mat4 V = glm::lookAt(glm::vec3(0.0f), mycam.getViewDir(), mycam.getUpDir());
+
+		glm::mat4 M = calcualteFrustamNearBounds(mycam.getFOV(), mycam.getNearDist(), mycam.getAspect());
 
 		//send the matrices to the shaders 
+		glUniformMatrix4fv(progAtmos->getUniform("M"), 1, GL_FALSE, &M[0][0]);
 		glUniformMatrix4fv(progAtmos->getUniform("V"), 1, GL_FALSE, &V[0][0]);
+		glUniformMatrix4fv(progAtmos->getUniform("P"), 1, GL_FALSE, &P[0][0]);
 		glUniform3fv(progAtmos->getUniform("campos"), 1, &mycam.getLocation()[0]);
-		glUniform3fv(progAtmos->getUniform("uSunPos"), 1, &vec3(0, cos(time) * 0.4f + 0.3f, -1)[0]);
+		glUniform3fv(progAtmos->getUniform("uSunPos"), 1, &sun.position[0]);
 
 		glDisable(GL_DEPTH_TEST);
 		atmosQuad->draw(progAtmos, FALSE);
@@ -636,6 +663,18 @@ public:
 		glEnable(GL_DEPTH_TEST);
 
 		progAtmos->unbind();
+	}
+
+	glm::mat4 calcualteFrustamNearBounds(float fovy, float near, float aspect) {
+		//TODO: convert to radians?
+		float hypot = near / sin(fovy * 2 * pi / 360);
+		float angle = 90.0f - fovy;
+		//side is half the height of the near plane
+		float side = sin(angle * 2 * pi / 360) * hypot ;
+
+		auto S = glm::scale(glm::mat4(1.0f), glm::vec3(side * aspect, side, 1.0f));
+		auto T = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, near));
+		return S * T;
 	}
 
 	glm::mat4 SetSkyboxModel()
@@ -648,6 +687,13 @@ public:
 		T = glm::translate(glm::mat4(1.0f), mycam.getLocation());
 
 		return T * RotateX * S;
+	}
+
+	glm::mat4 SetAtmosphereView()
+	{
+		auto R = glm::rotate(glm::mat4(1.0f), mycam.getTheta(), glm::vec3(0.0f, 1.0f, 0.0f));
+		R *= glm::rotate(glm::mat4(1.0f), mycam.getPhi(), glm::vec3(1.0f, 0.0f, 0.0f));
+		return R;
 	}
 
 	glm::mat4 getModelMatrix() {
@@ -718,7 +764,7 @@ int main(int argc, char **argv)
 	time.reset();
 	while (!glfwWindowShouldClose(windowManager->getHandle()))
 	{
-		application->update(time.elapsed());
+		application->update((float) time.elapsed());
 		// Render scene.
 		application->render();
 

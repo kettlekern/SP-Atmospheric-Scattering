@@ -1,4 +1,5 @@
 #include "Camera.h"
+#include <IOstream>
 
 
 using namespace glm;
@@ -111,8 +112,8 @@ void FPcamera::setCamera(GLFWwindow* window) {
 	double mousePosX, mousePosY;
 	glfwGetCursorPos(window, &mousePosX, &mousePosY);
 
-	float theta = -(float)mousePosX / 36000.0f * SENSITIVITY;
-	float phi = (float)(mousePosY - mousePos.y) / 36000.0f * SENSITIVITY;
+	theta = -(float)mousePosX / 36000.0f * SENSITIVITY;
+	phi = (float)(mousePosY - mousePos.y) / 36000.0f * SENSITIVITY;
 
 	if (VERT_ANGLE_LIMIT <= phi) {
 		mousePos.y = mousePosY - VERT_ANGLE_LIMIT * 36000.0f / SENSITIVITY;
@@ -123,8 +124,6 @@ void FPcamera::setCamera(GLFWwindow* window) {
 		mousePos.y = mousePosY + VERT_ANGLE_LIMIT * 36000.0f / SENSITIVITY;
 		phi = -VERT_ANGLE_LIMIT;
 	}
-
-	float x, y, z;
 	direction.x = sin(theta) * sin(phi + pi / 2);
 	direction.y = cos(phi + pi / 2);
 	direction.z = cos(theta) * sin(phi + pi / 2);
@@ -139,7 +138,7 @@ void FPcamera::update(GLFWwindow* window, float elapsedTime){
 	vec3 viewDir = getViewDir();
 	vec3 rightDir = cross(viewDir, upDir);
 
-	float finalmult = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ? speedmult*4.0 : speedmult;
+	float finalmult = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ? speedmult * 5.0f : speedmult;
 
 	if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS){
 		pos += viewDir*elapsedTime*finalmult;
@@ -172,12 +171,11 @@ glm::vec3 FPcamera::getViewDir(){
 //Returns the view matrix
 glm::mat4 FPcamera::getView(){
 	return glm::lookAt(pos, pos + getViewDir(), upDir);
-	/*auto R = glm::lookAt(pos, pos + getViewDir(), upDir);
-	auto T = glm::translate(glm::mat4(1.0f), pos);
-	return R * T;*/
 }
 
 //Returns the perspective matrix associated with the camera
 glm::mat4 FPcamera::getPerspective(float aspect){
+	//This is terrible practice, fix this later
+	this->aspect = aspect;
 	return perspective(glm::radians(fov), aspect, near, far);
 }
