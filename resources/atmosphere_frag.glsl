@@ -119,7 +119,7 @@ vec3 atmosphere(vec3 r, vec3 r0, vec3 pSun, float iSun, float rPlanet, float rAt
 void main() {
     vec3 col = atmosphere(
         normalize(vec3(fragPos)),               // normalized ray direction
-        vec3(0,planetRadius + 1e3,0) + campos,  // ray origin
+        vec3(0,planetRadius,0) + campos,        // ray origin
         uSunPos,                                // position of the sun
         22.0,                                   // intensity of the sun
         planetRadius,                           // radius of the planet in meters

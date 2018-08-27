@@ -63,10 +63,15 @@ public:
 
 	void setCamera(GLFWwindow* window);
 
+	// Returns the polar coordinate theta for the direction of the camera
 	float getTheta() { return theta; }
+	// Returns the polar coordinate phi for the direction of the camera
 	float getPhi() { return phi; }
+	// Returns the aspect ratio used for the camera
 	float getAspect() { return aspect; }
+	// Returns the Field of View of used for the camera
 	float getFOV() { return fov; }
+	// Returns the distance to the near plane used by the perspective matrix for the camera
 	float getNearDist() { return near; }
 
 	//Returns the perspective matrix associated with the camera

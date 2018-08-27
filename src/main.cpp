@@ -41,8 +41,10 @@ class Sun {
 public:
 	glm::vec3 position;
 	glm::vec3 color;
+
+	// Change the position of the sun over time
 	void update(float dt) {
-		//time += dt * 0.1f;
+		time += dt * 0.1f;
 		position = vec3(0.0f, cos(time), sin(time)) * 1000.0f;
 	}
 protected:
@@ -72,6 +74,7 @@ public:
 	GLuint GrassTexture, SnowTexture, SandTexture, CliffTexture;
 	GLuint SkyTexture, NightTexture;
 	GLuint GrassNormal, SnowNormal, SandNormal, CliffNormal;
+	//This should be removed and code using this should have update(float dt) methods instead
 	float time = 1.0;
 	FPcamera mycam;
 
@@ -91,8 +94,6 @@ public:
 		}
 	}
 
-	// callback for the mouse when clicked move the triangle when helper functions
-	// written
 	void mouseCallback(GLFWwindow *window, int button, int action, int mods)
 	{
 
@@ -134,7 +135,6 @@ public:
 
 		//tex coords
 		float t = RESOLUTION / 100;
-		//float t = RESOLUTION / 100;
 
 		vec2 *tex = new vec2[MESHSIZE * MESHSIZE * 4];
 		for (int x = 0; x < MESHSIZE; x++)
@@ -200,7 +200,6 @@ public:
 
 		//tex coords
 		float t = W_RESOLUTION / 100;
-		//float t = W_RESOLUTION / 100;
 
 		vec2 *tex = new vec2[WATERSIZE * WATERSIZE * 4];
 		for (int x = 0; x < WATERSIZE; x++)
@@ -311,7 +310,6 @@ public:
 		// Initialize mesh.
 		atmosQuad = make_shared<Shape>();
 		atmosQuad->loadMesh(resourceDirectory + "/quad.obj");
-		//Don't resize this, we want it to have size 2 later
 		atmosQuad->resize();
 		atmosQuad->init();
 	}
@@ -644,10 +642,7 @@ public:
 		progAtmos->bind();
 
 		glm::mat4 V = SetAtmosphereView();
-		//We want the camera position for the rays to be 0 based because we use the camera position in the shader
-		
-		//glm::mat4 V = glm::lookAt(glm::vec3(0.0f), mycam.getViewDir(), mycam.getUpDir());
-
+		//This is positioning the quad at the near plane of the perspective view frustum 
 		glm::mat4 M = calcualteFrustamNearBounds(mycam.getFOV(), mycam.getNearDist(), mycam.getAspect());
 
 		//send the matrices to the shaders 
@@ -665,12 +660,14 @@ public:
 		progAtmos->unbind();
 	}
 
+	// This takes a unit quad and places it at the near plane 
+	//  of the view frustum with the same dimensions
+	// This does not rotate the plane with the camera
 	glm::mat4 calcualteFrustamNearBounds(float fovy, float near, float aspect) {
-		//TODO: convert to radians?
 		float hypot = near / sin(fovy * 2 * pi / 360);
 		float angle = 90.0f - fovy;
 		//side is half the height of the near plane
-		float side = sin(angle * 2 * pi / 360) * hypot ;
+		float side = sin(angle * 2 * pi / 360) * hypot;
 
 		auto S = glm::scale(glm::mat4(1.0f), glm::vec3(side * aspect, side, 1.0f));
 		auto T = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, near));
@@ -689,9 +686,10 @@ public:
 		return T * RotateX * S;
 	}
 
+	// Returns the rotation matrix to match the camera's rotation for the atmosphere plane
 	glm::mat4 SetAtmosphereView()
 	{
-		auto R = glm::rotate(glm::mat4(1.0f), mycam.getTheta(), glm::vec3(0.0f, 1.0f, 0.0f));
+		auto R = glm::rotate(glm::mat4(1.0f), -mycam.getTheta(), glm::vec3(0.0f, 1.0f, 0.0f));
 		R *= glm::rotate(glm::mat4(1.0f), mycam.getPhi(), glm::vec3(1.0f, 0.0f, 0.0f));
 		return R;
 	}
@@ -701,6 +699,7 @@ public:
 		return glm::translate(glm::mat4(1.0f), glm::vec3(centerOffset, 2.0f, centerOffset));
 	}
 
+	// Sets the View (V) and Perspective (P) matricies
 	void InitMatricies(glm::mat4 &V, glm::mat4 &P, int width, int height)
 	{
 		V = mycam.getView();
