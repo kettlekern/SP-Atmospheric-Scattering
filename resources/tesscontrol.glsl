@@ -11,7 +11,7 @@ out vec2 TE_vertex_tex[];
 
 float calculateTessFactLinear() {
 	float df = meshsize * resolution;
-	float dist = df - length(campos.xz + vertex_pos[gl_InvocationID].xz);
+	float dist = df - length(campos - vertex_pos[gl_InvocationID]);
 	dist /= df;
 	dist = pow(dist, 5);
 
@@ -35,17 +35,17 @@ float calculateTessFactLinear() {
 
 float calculateTessFactCutoff(vec3 camPosition, vec3 vertexPosition) {
 	float df = meshsize * resolution;
-	float dist = length(camPosition + vertexPosition);
+	float dist = length(camPosition - vertexPosition);
 	float tessfact;
 
 	if (dist < 300) {
-		tessfact = 32.;
+		tessfact = 4.0;
 	}
-	else if (dist < 500) {
-		tessfact = 16.;
+	else if (dist < 600) {
+		tessfact = 2.0;
 	}
 	else {
-		tessfact = 8.;
+		tessfact = 1.0;
 	}
 
 	return tessfact;
@@ -54,6 +54,7 @@ float calculateTessFactCutoff(vec3 camPosition, vec3 vertexPosition) {
 
 void main(void)
 { 
+	//float tessfact = calculateTessFactCutoff(campos, vertex_pos[gl_InvocationID]);
 	float tessfact = calculateTessFactLinear();
 
 	gl_TessLevelInner[0] = tessfact;

@@ -22,7 +22,7 @@ using namespace glm;
 shared_ptr<Shape> skySphere;
 
 
-#define DRAW_LINES false
+#define DRAW_LINES true
 #define DRAW_GREY false
 
 #define WATERSIZE 1
@@ -91,6 +91,14 @@ public:
 		if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		{
 			glfwSetWindowShouldClose(window, GL_TRUE);
+		}
+		//Recompile shaders when R is pressed
+		if (key == GLFW_KEY_R && action == GLFW_PRESS)
+		{
+			heightshader->init();
+			progSky->init();
+			progWater->init();
+			progAtmos->init();
 		}
 	}
 
@@ -523,9 +531,11 @@ public:
 
 		//DrawSkybox(P, V);
 
-		DrawAtmosphere(P);
+		if (!DRAW_LINES) {
+			DrawAtmosphere(P);
 
-		DrawWater(P, V, offset);
+			DrawWater(P, V, offset);
+		}
 
 		DrawTerrain(P, V, offset);
 
