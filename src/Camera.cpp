@@ -153,10 +153,10 @@ void FPcamera::update(GLFWwindow* window, float elapsedTime){
 		pos -= rightDir * elapsedTime * finalmult;
 	}
 	if(glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS){
-		pos += upDir * elapsedTime * finalmult;
+		pos += upDir * elapsedTime * finalmult * 100.0f;
 	}
 	if(glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS){
-		pos -= upDir * elapsedTime * finalmult;
+		pos -= upDir * elapsedTime * finalmult * 100.0f;
 	}
 }
 

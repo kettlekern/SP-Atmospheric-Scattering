@@ -45,7 +45,7 @@ public:
 	// Change the position of the sun over time
 	void update(float dt) {
 		time += dt * 0.1f;
-		position = vec3(0.0f, cos(time), sin(time)) * 1000.0f;
+		position = vec3(0.0f, cos(time), sin(time)) * 1000000.0f;
 	}
 protected:
 	float time = 0.0f;
@@ -86,19 +86,16 @@ public:
 	Sun sun;
 	const float pi = 3.14159265f;
 
+
 	void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 	{
 		if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		{
 			glfwSetWindowShouldClose(window, GL_TRUE);
 		}
-		//Recompile shaders when R is pressed
 		if (key == GLFW_KEY_R && action == GLFW_PRESS)
 		{
-			heightshader->init();
-			progSky->init();
-			progWater->init();
-			progAtmos->init();
+			 update(3.14159265f * 10);
 		}
 	}
 
@@ -531,9 +528,9 @@ public:
 
 		//DrawSkybox(P, V);
 
-		if (!DRAW_LINES) {
-			DrawAtmosphere(P);
+		DrawAtmosphere(P);
 
+		if (!DRAW_LINES) {
 			DrawWater(P, V, offset);
 		}
 
@@ -581,6 +578,14 @@ public:
 
 	void DrawTerrain(const glm::mat4 &P, const glm::mat4 &V, const glm::vec3 &offset)
 	{
+		// GL POLYGON _________________________________________________
+		if (DRAW_LINES) {
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		}
+		else {
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		}
+		// ____________________________________________________________
 		// Draw the terrain -----------------------------------------------------------------
 		heightshader->bind();
 
@@ -618,6 +623,9 @@ public:
 
 		glPatchParameteri(GL_PATCH_VERTICES, 3);
 		glDrawElements(GL_PATCHES, MESHSIZE*MESHSIZE * 6, GL_UNSIGNED_INT, (void*)0);
+
+		//The terrain is the only part we want lines for
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
 
 	void DrawSkybox(const glm::mat4 &P, const glm::mat4 &V)
@@ -724,15 +732,6 @@ public:
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		setTime();
-
-		// GL POLYGON _________________________________________________
-		if (DRAW_LINES == true) {
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		}
-		else {
-			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		}
-		// ____________________________________________________________
 	}
 
 	void setTime()
