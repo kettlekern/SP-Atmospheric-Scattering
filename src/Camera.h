@@ -63,9 +63,9 @@ public:
 
 	void setCamera(GLFWwindow* window);
 
-	// Returns the polar coordinate theta for the direction of the camera
+	// Returns the polar coordinate theta (Yaw angle) for the direction of the camera
 	float getTheta() { return theta; }
-	// Returns the polar coordinate phi for the direction of the camera
+	// Returns the polar coordinate phi (Pitch angle) for the direction of the camera
 	float getPhi() { return phi; }
 	// Returns the aspect ratio used for the camera
 	float getAspect() { return aspect; }

@@ -2,3 +2,5 @@ build/
 Debug/
 .vs
 .travis.yml
+src/x64/
+x64/

@@ -48,8 +48,7 @@ void Shape::loadMesh(const string &meshName, string *mtlpath, unsigned char *(lo
 		for (int i = 0; i < obj_count; i++)
 		{
 			//load textures
-			textureIDs[i] = 0;
-			//texture sky			
+			textureIDs[i] = 0;		
 			posBuf[i] = shapes[i].mesh.positions;
 			norBuf[i] = shapes[i].mesh.normals;
 			texBuf[i] = shapes[i].mesh.texcoords;
@@ -84,7 +83,7 @@ void Shape::loadMesh(const string &meshName, string *mtlpath, unsigned char *(lo
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-			glGenerateMipmap(GL_TEXTURE_2D);
+			CHECKED_GL_CALL(glGenerateMipmap(GL_TEXTURE_2D));
 			//delete[] data;
 		}
 
@@ -157,7 +156,13 @@ void Shape::resize()
 		}
 }
 
-void Shape::init()
+
+void Shape::init() 
+{
+	init(false);
+}
+
+void Shape::init(bool loadNormals)
 {
 	for (int i = 0; i < obj_count; i++)
 
@@ -172,7 +177,7 @@ void Shape::init()
 		glBufferData(GL_ARRAY_BUFFER, posBuf[i].size() * sizeof(float), posBuf[i].data(), GL_STATIC_DRAW);
 
 		// Send the normal array to the GPU
-		if (norBuf[i].empty())
+		if (norBuf[i].empty() || !loadNormals)
 		{
 			norBufID[i] = 0;
 		}
@@ -207,7 +212,16 @@ void Shape::init()
 		assert(glGetError() == GL_NO_ERROR);
 	}
 }
-void Shape::draw(const shared_ptr<Program> prog,bool use_extern_texures) const
+
+void Shape::draw(const shared_ptr<Program> prog) const {
+	draw(prog, false, false);
+}
+
+void Shape::draw(const shared_ptr<Program> prog, bool use_extern_texures) const {
+	draw(prog, use_extern_texures, false);
+}
+
+void Shape::draw(const shared_ptr<Program> prog, bool use_extern_texures, bool use_normals) const
 {
 	for (int i = 0; i < obj_count; i++)
 
@@ -222,15 +236,13 @@ void Shape::draw(const shared_ptr<Program> prog,bool use_extern_texures) const
 		glBindBuffer(GL_ARRAY_BUFFER, posBufID[i]);
 		glVertexAttribPointer(h_pos, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
 
-		// REMEMBER TO UNCOMMENT THIS IF YOU NEED TO USE NORMALS WITH THE SHAPE CLASS
-		// Bind normal buffer
-		/*h_nor = prog->getAttribute("vertNor");
-		if (h_nor != -1 && norBufID[i] != 0)
+		if (norBufID[i] != 0 && use_normals)
 		{
+			h_nor = prog->getAttribute("vertNor");
 			GLSL::enableVertexAttribArray(h_nor);
 			glBindBuffer(GL_ARRAY_BUFFER, norBufID[i]);
-			glVertexAttribPointer(h_nor, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
-		}*/
+			CHECKED_GL_CALL(glVertexAttribPointer(h_nor, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0));
+		}
 
 		if (texBufID[i] != 0)
 		{

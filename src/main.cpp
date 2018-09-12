@@ -22,21 +22,16 @@ using namespace glm;
 shared_ptr<Shape> skySphere;
 
 
-#define DRAW_LINES true
+#define DRAW_LINES false
 #define DRAW_GREY false
+// When doing a full implementation, this should be a member variable in a planet class
+// Currently, this value is not passed through to the atmosphere, just copied from the value in the shader. Change that in implementation for variable planet sizes
+#define PLANET_RADIUS 6372e3
 
 #define WATERSIZE 1
 #define W_RESOLUTION (2.0f * MESHSIZE)
 
-double get_last_elapsed_time()
-{
-	static double lasttime = glfwGetTime();
-	double actualtime = glfwGetTime();
-	double difference = actualtime - lasttime;
-	lasttime = actualtime;
-	return difference;
-}
-
+// This should be extracted to its own header
 class Sun {
 public:
 	glm::vec3 position;
@@ -45,6 +40,7 @@ public:
 	// Change the position of the sun over time
 	void update(float dt) {
 		time += dt * 0.1f;
+		//Position the sun in the sky far away and have it move based on the time
 		position = vec3(0.0f, cos(time), sin(time)) * 1000000.0f;
 	}
 protected:
@@ -60,7 +56,7 @@ public:
 	WindowManager * windowManager = nullptr;
 
 	// Our shader program
-	std::shared_ptr<Program> heightshader, progSky, progWater, progAtmos;
+	std::shared_ptr<Program> heightshader, progWater, progAtmos, worldSphereShader;
 
 	// Contains vertex information for OpenGL
 	GLuint TerrainVertexArrayID;
@@ -72,19 +68,15 @@ public:
 
 	//texture data
 	GLuint GrassTexture, SnowTexture, SandTexture, CliffTexture;
-	GLuint SkyTexture, NightTexture;
 	GLuint GrassNormal, SnowNormal, SandNormal, CliffNormal;
 	//This should be removed and code using this should have update(float dt) methods instead
 	float time = 1.0;
 	FPcamera mycam;
 
-	//geometry for texture render
-	GLuint quad_VertexArrayID;
-	GLuint quad_vertexbuffer;
-
-	shared_ptr<Shape> atmosQuad;
+	shared_ptr<Shape> atmosQuad, worldSphere;
 	Sun sun;
 	const float pi = 3.14159265f;
+	bool drawSphereToggle = false;
 
 
 	void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
@@ -95,7 +87,11 @@ public:
 		}
 		if (key == GLFW_KEY_R && action == GLFW_PRESS)
 		{
-			 update(3.14159265f * 10);
+			 update(pi * 10);
+		}
+		if (key == GLFW_KEY_Q && action == GLFW_PRESS)
+		{
+			drawSphereToggle = !drawSphereToggle;
 		}
 	}
 
@@ -250,11 +246,10 @@ public:
 		init_water();
 
 		string resourceDirectory = "../resources";
-		init_skySphere(resourceDirectory);
 
 		InitTextures(resourceDirectory);
 
-		InitSkysphere(resourceDirectory);
+		InitWorldSphere(resourceDirectory);
 
 		InitAtmosphereQuad(resourceDirectory);
 
@@ -265,49 +260,31 @@ public:
 
 	}
 
-	void InitSkysphere(const std::string &resourceDirectory)
-	{
-		// Skybox Day Texture
-		InitSkysphere((resourceDirectory + "/sky.jpg").c_str(), SkyTexture);
-
-		// Skybox Night Texture
-		InitSkysphere((resourceDirectory + "/sky2.jpg").c_str(), NightTexture);
-	}
-
 	void InitTextures(const std::string &resourceDirectory)
 	{
 		// Grass texture
 		InitTexture((resourceDirectory + "/grass.jpg").c_str(), GrassTexture);
 
 		// Grass normal map
-		InitTexture((resourceDirectory + "/grass_normal.jpg").c_str(), GrassNormal);
+		InitTexture((resourceDirectory + "/grass_normal.png").c_str(), GrassNormal);
 
 		// Snow texture
 		InitTexture((resourceDirectory + "/snow.jpg").c_str(), SnowTexture);
 
 		// Snow normal map
-		InitTexture((resourceDirectory + "/snow_normal.jpg").c_str(), SnowNormal);
+		InitTexture((resourceDirectory + "/snow_normal.png").c_str(), SnowNormal);
 
 		// Sand texture
 		InitTexture((resourceDirectory + "/sand.jpg").c_str(), SandTexture);
 
 		// Sand normal map
-		InitTexture((resourceDirectory + "/sand_normal.jpg").c_str(), SandNormal);
+		InitTexture((resourceDirectory + "/sand_normal.png").c_str(), SandNormal);
 
 		// Cliff texture
 		InitTexture((resourceDirectory + "/cliff.jpg").c_str(), CliffTexture);
 
 		// Cliff normal map
-		InitTexture((resourceDirectory + "/cliff_normal.jpg").c_str(), CliffNormal);
-	}
-
-	void init_skySphere(const std::string &resourceDirectory)
-	{
-		// Initialize mesh.
-		skySphere = make_shared<Shape>();
-		skySphere->loadMesh(resourceDirectory + "/sphere.obj");
-		skySphere->resize();
-		skySphere->init();
+		InitTexture((resourceDirectory + "/cliff_normal.png").c_str(), CliffNormal);
 	}
 
 	void InitAtmosphereQuad(const std::string &resourceDirectory)
@@ -317,6 +294,15 @@ public:
 		atmosQuad->loadMesh(resourceDirectory + "/quad.obj");
 		atmosQuad->resize();
 		atmosQuad->init();
+	}
+
+	void InitWorldSphere(const std::string &resourceDirectory)
+	{
+		// Initialize mesh.
+		worldSphere = make_shared<Shape>();
+		worldSphere->loadMesh(resourceDirectory + "/HighResSphere.obj");
+		worldSphere->resize();
+		worldSphere->init(true);
 	}
 
 	void InitTextureLocations()
@@ -345,11 +331,6 @@ public:
 		glUniform1i(GrassNormalLocation, 6);
 		glUniform1i(SandNormalLocation, 7);
 
-		SkyTextureLocation = glGetUniformLocation(progSky->pid, "dayTexSampler");
-		NightTextureLocation = glGetUniformLocation(progSky->pid, "nightTexSampler");
-		glUseProgram(progSky->pid);
-		glUniform1i(SkyTextureLocation, 0);
-		glUniform1i(NightTextureLocation, 1);
 	}
 
 	void InitTexture(const char * filepath, GLuint & texture)
@@ -364,22 +345,6 @@ public:
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 3);
-		glGenerateMipmap(GL_TEXTURE_2D);
-	}
-
-	void InitSkysphere(const char * filepath, GLuint & texture)
-	{
-		int width, height, channels;
-		unsigned char * data = stbi_load(filepath, &width, &height, &channels, 4);
-		glGenTextures(1, &texture);
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, texture);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 		glGenerateMipmap(GL_TEXTURE_2D);
 	}
 
@@ -396,15 +361,16 @@ public:
 		InitProgs(resourceDirectory);
 	}
 
+	// Initilize the shaders
 	void InitProgs(const std::string & resourceDirectory)
 	{
 		InitHeightShader(resourceDirectory);
 
-		InitSkyShader(resourceDirectory);
-
 		InitWaterShader(resourceDirectory);
 
 		InitAtmosphereShader(resourceDirectory);
+
+		InitWorldSphereShader(resourceDirectory);
 	}
 
 	void InitHeightShader(const std::string & resourceDirectory)
@@ -434,31 +400,32 @@ public:
 		heightshader->addAttribute("vertTex");
 	}
 
-	void InitSkyShader(const std::string & resourceDirectory)
+	void InitWorldSphereShader(const std::string & resourceDirectory)
 	{
-		// Initialize the GLSL progSkyram.
-		progSky = std::make_shared<Program>();
-		progSky->setVerbose(true);
-		progSky->setShaderNames(resourceDirectory + "/skyvertex.glsl", resourceDirectory + "/skyfrag.glsl");
-		if (!progSky->init())
+		// Initialize the GLSL program.
+		worldSphereShader = std::make_shared<Program>();
+		worldSphereShader->setVerbose(true);
+		worldSphereShader->setShaderNames(resourceDirectory + "/PhongVert.glsl", resourceDirectory + "/PhongFrag.glsl");
+		if (!worldSphereShader->init())
 		{
-			std::cerr << "Skybox shaders failed to compile... exiting!" << std::endl;
+			std::cerr << "World Sphere shaders failed to compile... exiting!" << std::endl;
 			int hold;
 			cin >> hold;
 			exit(1);
 		}
-		progSky->addUniform("P");
-		progSky->addUniform("V");
-		progSky->addUniform("M");
-		progSky->addUniform("campos");
-		progSky->addUniform("time");
-		progSky->addAttribute("vertPos");
-		progSky->addAttribute("vertTex");
+		worldSphereShader->addUniform("P");
+		worldSphereShader->addUniform("V");
+		worldSphereShader->addUniform("M");
+		worldSphereShader->addUniform("uSunPos");
+		worldSphereShader->addUniform("campos");
+		worldSphereShader->addAttribute("vertPos");
+		worldSphereShader->addAttribute("vertNor");
+		worldSphereShader->addAttribute("vertTex");
 	}
 
 	void InitAtmosphereShader(const std::string & resourceDirectory)
 	{
-		// Initialize the GLSL progSkyram.
+		// Initialize the GLSL program.
 		progAtmos = std::make_shared<Program>();
 		progAtmos->setVerbose(true);
 		progAtmos->setShaderNames(resourceDirectory + "/atmosphere_vert.glsl", resourceDirectory + "/atmosphere_frag.glsl");
@@ -501,6 +468,7 @@ public:
 		progWater->addAttribute("vertTex");
 	}
 
+	//Go therough the animated objects in the scene and update them
 	void update(float dt) 
 	{
 		mycam.update(windowManager->getHandle(), dt);
@@ -526,15 +494,18 @@ public:
 
 		vec3 offset = setOffset();
 
-		//DrawSkybox(P, V);
-
 		DrawAtmosphere(P);
 
-		if (!DRAW_LINES) {
-			DrawWater(P, V, offset);
+		if (drawSphereToggle) {
+			DrawSphere(P, V);
 		}
+		else {
+			if (!DRAW_LINES) {
+				DrawWater(P, V, offset);
+			}
 
-		DrawTerrain(P, V, offset);
+			DrawTerrain(P, V, offset);
+		}
 
 		heightshader->unbind();
 		glBindVertexArray(0);
@@ -628,35 +599,26 @@ public:
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
 
-	void DrawSkybox(const glm::mat4 &P, const glm::mat4 &V)
-	{
-		// Draw the skybox ----------------------------------------------------------------
-		progSky->bind();
+	void DrawSphere(const glm::mat4 &P, const glm::mat4 &V) {
+		worldSphereShader->bind();
 
-		glm::mat4 M = SetSkyboxModel();
+		//For this implementation, we place the top of the world at (0,0,0), so the planet needs to be translated down to match this value
+		glm::mat4 T = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -PLANET_RADIUS, 0.0f));
+		glm::mat4 S = glm::scale(glm::mat4(1.0f), glm::vec3(PLANET_RADIUS));
+		glm::mat4 M = T * S;
+		glUniformMatrix4fv(worldSphereShader->getUniform("M"), 1, GL_FALSE, &M[0][0]);
+		glUniformMatrix4fv(worldSphereShader->getUniform("V"), 1, GL_FALSE, &V[0][0]);
+		glUniformMatrix4fv(worldSphereShader->getUniform("P"), 1, GL_FALSE, &P[0][0]);
 
-		//send the matrices to the shaders 
-		glUniformMatrix4fv(progSky->getUniform("M"), 1, GL_FALSE, &M[0][0]);
-		glUniformMatrix4fv(progSky->getUniform("V"), 1, GL_FALSE, &V[0][0]);
-		glUniformMatrix4fv(progSky->getUniform("P"), 1, GL_FALSE, &P[0][0]);
-		glUniform3fv(progSky->getUniform("campos"), 1, &mycam.getLocation()[0]);
-		glUniform1f(progSky->getUniform("time"), time);
-
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, SkyTexture);
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, NightTexture);
-		glDisable(GL_DEPTH_TEST);
-		skySphere->draw(progSky, FALSE);
-
-		glEnable(GL_DEPTH_TEST);
-
-		progSky->unbind();
+		glUniform3fv(worldSphereShader->getUniform("campos"), 1, &mycam.getLocation()[0]);
+		glUniform3f(worldSphereShader->getUniform("uSunPos"), sun.position.x, sun.position.y, sun.position.z);
+		worldSphere->draw(worldSphereShader, false, true);
+		worldSphereShader->unbind();
 	}
 
 	void DrawAtmosphere(const glm::mat4 &P)
 	{
-		// Draw the skybox ----------------------------------------------------------------
+		// Draw the sky
 		progAtmos->bind();
 
 		glm::mat4 V = SetAtmosphereView();
@@ -671,7 +633,7 @@ public:
 		glUniform3fv(progAtmos->getUniform("uSunPos"), 1, &sun.position[0]);
 
 		glDisable(GL_DEPTH_TEST);
-		atmosQuad->draw(progAtmos, FALSE);
+		atmosQuad->draw(progAtmos);
 
 		glEnable(GL_DEPTH_TEST);
 
@@ -679,7 +641,7 @@ public:
 	}
 
 	// This takes a unit quad and places it at the near plane 
-	//  of the view frustum with the same dimensions
+	//      of the view frustum with the same dimensions
 	// This does not rotate the plane with the camera
 	glm::mat4 calcualteFrustamNearBounds(float fovy, float near, float aspect) {
 		float hypot = near / sin(fovy * 2 * pi / 360);
@@ -692,19 +654,8 @@ public:
 		return S * T;
 	}
 
-	glm::mat4 SetSkyboxModel()
-	{
-		float sangle = 3.1415926f / 2.0f;
-		glm::mat4 RotateX, T, S;
-
-		RotateX = glm::rotate(glm::mat4(1.0f), sangle, glm::vec3(1.0f, 0.0f, 0.0f));
-		S = glm::scale(glm::mat4(1.0f), glm::vec3(3.0f));
-		T = glm::translate(glm::mat4(1.0f), mycam.getLocation());
-
-		return T * RotateX * S;
-	}
-
 	// Returns the rotation matrix to match the camera's rotation for the atmosphere plane
+	// Assumes two degrees of freedom for the camera, pitch and yaw. Roll is not supported currently.
 	glm::mat4 SetAtmosphereView()
 	{
 		auto R = glm::rotate(glm::mat4(1.0f), -mycam.getTheta(), glm::vec3(0.0f, 1.0f, 0.0f));
