@@ -3,47 +3,16 @@
 #define __CAMERA_H_
 
 #include "MatrixStack.h"
-#include "SimpleComponents.hpp"
 #include <GLFW/glfw3.h>
-#define MESHSIZE 600
-#define RESOLUTION 2.0f // Higher value = less verticies per unit of measurement
+#define MESHSIZE 600 //This is a property of the terrain. It should be defined in a terrain class
+#define RESOLUTION 2.0f // Higher value = fewer verticies per unit of measurement
 
 //Aparently a windows package defines these somewhere, so I'm going to break their code because that is so irresponsible of them
 #undef near
 #undef far
 #undef aspect
 
-
-class OldCamera : public Camera
-{
-	glm::vec3 pos, rot;
-public:
-	int w, a, s, d, q, e, up, down, shift;
-	int speedConst;
-	OldCamera()
-	{
-		w = a = s = d = q = e = up = down = shift = 0;
-		speedConst = 5;
-		pos = rot = glm::vec3(0, 0, 0);
-		pos = glm::vec3(0, -3, 0);
-	}
-
-	glm::vec3 getLocation() { return pos; }
-
-	glm::vec3 getViewDir() { return rot; }
-
-	glm::mat4 update(float ftime);
-
-	glm::mat4 getView() { return update(.0005f); }
-
-	glm::mat4 getPerspective(float aspect) {
-		return glm::perspective((3.14159f / 4.0f), aspect, 0.1f, MESHSIZE * RESOLUTION);
-	}
-
-	void update(GLFWwindow* window, float elapsedTime);
-};
-
-class FPcamera : public Camera {
+class FPcamera {
 public:
 	FPcamera() {};
 	FPcamera(const glm::vec3& loc) : pos(loc) {}
@@ -71,15 +40,18 @@ public:
 	float getAspect() { return aspect; }
 	// Returns the Field of View of used for the camera
 	float getFOV() { return fov; }
-	// Returns the distance to the near plane used by the perspective matrix for the camera
-	float getNearDist() { return near; }
+	// Returns the distance to the far plane used by the perspective matrix for the camera
+	float getFarDist() { return far; }
 
 	//Returns the perspective matrix associated with the camera
-	glm::mat4 getPerspective(float aspect);
+	glm::mat4 getPerspective();
+	//Sets the aspect ratio to the given value
+	void setPerspective(float aspect) { this->aspect = aspect; }
 
 protected:
 
-	glm::vec3 pos = glm::vec3(0.0f, 130.0f, 0.0f);
+
+	glm::vec3 pos = glm::vec3(0.0f, 20.0f, 0.0f);
 	glm::vec3 direction = glm::vec3(0.0f, 0.0f, 1.0f);
 	glm::vec3 upDir = glm::vec3(0.0f, 1.0f, 0.0f);
 

@@ -16,4 +16,5 @@ Camera controls:
 	Shift - Increase camera speed
 	Q - Toggle terrain/giant sphere
 	R - Rotate the sun by 12 hours
+	P - Pause the motion of the sun
 	Esc - Exit

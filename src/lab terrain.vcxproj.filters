@@ -22,7 +22,6 @@
     <ClInclude Include="tiny_obj_loader.h" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="Camera.h" />
-    <ClInclude Include="SimpleComponents.hpp" />
     <ClInclude Include="Timeline.hpp" />
     <ClInclude Include="AtmosphericScattering.h" />
   </ItemGroup>

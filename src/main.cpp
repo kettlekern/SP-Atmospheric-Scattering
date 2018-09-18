@@ -77,6 +77,7 @@ public:
 	Sun sun;
 	const float pi = 3.14159265f;
 	bool drawSphereToggle = false;
+	bool pause = false;
 
 
 	void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
@@ -92,6 +93,10 @@ public:
 		if (key == GLFW_KEY_Q && action == GLFW_PRESS)
 		{
 			drawSphereToggle = !drawSphereToggle;
+		}
+		if (key == GLFW_KEY_P && action == GLFW_PRESS)
+		{
+			pause = !pause;
 		}
 	}
 
@@ -309,7 +314,7 @@ public:
 	{
 		//[TWOTEXTURES]
 		//set the 2 textures to the correct samplers in the fragment shader:
-		GLuint GrassTextureLocation, SnowTextureLocation, SandTextureLocation, CliffTextureLocation, SkyTextureLocation, NightTextureLocation;
+		GLuint GrassTextureLocation, SnowTextureLocation, SandTextureLocation, CliffTextureLocation;
 		GLuint GrassNormalLocation, SnowNormalLocation, SandNormalLocation, CliffNormalLocation;
 
 		GrassTextureLocation = glGetUniformLocation(heightshader->pid, "grassSampler");
@@ -472,6 +477,9 @@ public:
 	void update(float dt) 
 	{
 		mycam.update(windowManager->getHandle(), dt);
+		if (pause) {
+			dt = 0;
+		}
 		sun.update(dt);
 	}
 
@@ -595,7 +603,7 @@ public:
 		glPatchParameteri(GL_PATCH_VERTICES, 3);
 		glDrawElements(GL_PATCHES, MESHSIZE*MESHSIZE * 6, GL_UNSIGNED_INT, (void*)0);
 
-		//The terrain is the only part we want lines for
+		//The terrain is the only part we want to render as lines
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
 
@@ -616,14 +624,14 @@ public:
 		worldSphereShader->unbind();
 	}
 
-	void DrawAtmosphere(const glm::mat4 &P)
+	void DrawAtmosphere(const glm::mat4 & P)
 	{
 		// Draw the sky
 		progAtmos->bind();
 
 		glm::mat4 V = SetAtmosphereView();
 		//This is positioning the quad at the near plane of the perspective view frustum 
-		glm::mat4 M = calcualteFrustamNearBounds(mycam.getFOV(), mycam.getNearDist(), mycam.getAspect());
+		glm::mat4 M = CalcualteFrustumFarBounds(mycam.getFOV(), mycam.getFarDist(), mycam.getAspect());
 
 		//send the matrices to the shaders 
 		glUniformMatrix4fv(progAtmos->getUniform("M"), 1, GL_FALSE, &M[0][0]);
@@ -640,22 +648,22 @@ public:
 		progAtmos->unbind();
 	}
 
-	// This takes a unit quad and places it at the near plane 
+	// This takes a unit quad and places it at the far plane 
 	//      of the view frustum with the same dimensions
 	// This does not rotate the plane with the camera
-	glm::mat4 calcualteFrustamNearBounds(float fovy, float near, float aspect) {
-		float hypot = near / sin(fovy * 2 * pi / 360);
+	glm::mat4 CalcualteFrustumFarBounds(float fovy, float far, float aspect) {
+		float hypot = far / sin(fovy * 2 * pi / 360.0f);
 		float angle = 90.0f - fovy;
 		//side is half the height of the near plane
-		float side = sin(angle * 2 * pi / 360) * hypot;
+		float side = sin(angle * 2 * pi / 360.0f) * hypot;
 
 		auto S = glm::scale(glm::mat4(1.0f), glm::vec3(side * aspect, side, 1.0f));
-		auto T = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, near));
+		auto T = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, far));
 		return S * T;
 	}
 
 	// Returns the rotation matrix to match the camera's rotation for the atmosphere plane
-	// Assumes two degrees of freedom for the camera, pitch and yaw. Roll is not supported currently.
+	// Assumes two degrees of freedom for the camera, pitch and yaw. Roll is not currently supported.
 	glm::mat4 SetAtmosphereView()
 	{
 		auto R = glm::rotate(glm::mat4(1.0f), -mycam.getTheta(), glm::vec3(0.0f, 1.0f, 0.0f));
@@ -672,7 +680,8 @@ public:
 	void InitMatricies(glm::mat4 &V, glm::mat4 &P, int width, int height)
 	{
 		V = mycam.getView();
-		P = mycam.getPerspective(width / (float)height);
+		mycam.setPerspective(width / (float)height);
+		P = mycam.getPerspective();
 	}
 
 	void InitRender(int width, int height)
@@ -709,7 +718,7 @@ int main(int argc, char **argv)
 	/* your main will always include a similar set up to establish your window
 		and GL context, etc. */
 	WindowManager * windowManager = new WindowManager();
-	windowManager->init(640, 480);
+	windowManager->init(1280, 720);
 	windowManager->setEventCallbacks(application);
 	application->windowManager = windowManager;
 

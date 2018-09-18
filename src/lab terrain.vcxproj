@@ -36,7 +36,6 @@
     <ClInclude Include="MatrixStack.h" />
     <ClInclude Include="Program.h" />
     <ClInclude Include="Shape.h" />
-    <ClInclude Include="SimpleComponents.hpp" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="Timeline.hpp" />
     <ClInclude Include="tiny_obj_loader.h" />
