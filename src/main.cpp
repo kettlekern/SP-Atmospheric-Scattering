@@ -650,11 +650,15 @@ public:
 
 	// This takes a unit quad and places it at the far plane 
 	//      of the view frustum with the same dimensions
-	// This does not rotate the plane with the camera
+	// @fovy The field of view in the y direction of the camera.
+	// @far The distance to the far plane from the camera.
+	// @aspect The aspect ratio of the camera.
 	glm::mat4 CalcualteFrustumFarBounds(float fovy, float far, float aspect) {
+		// The length of the hypotenuse of the triangle defined by the camera, the middle of the atmosphere quad, and the top of the atmosphere quad.
 		float hypot = far / sin(fovy * 2 * pi / 360.0f);
+		// The angle between the hypotenuse and atmosphere quad.
 		float angle = 90.0f - fovy;
-		//side is half the height of the near plane
+		// The length of the quad from center to top.
 		float side = sin(angle * 2 * pi / 360.0f) * hypot;
 
 		auto S = glm::scale(glm::mat4(1.0f), glm::vec3(side * aspect, side, 1.0f));
