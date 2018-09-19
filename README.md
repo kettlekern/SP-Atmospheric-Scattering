@@ -6,6 +6,8 @@ updates from Kettlekern
 
 Features - Procedurally generated terrain, Atmospheric scattering, and Terrain tessellation 
 
+More details in Website/index.html
+
 Camera controls: 
 	W - Forward
 	A - Left
